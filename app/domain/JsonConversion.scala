@@ -2,19 +2,18 @@ package domain
 
 import play.api.data.validation.ValidationError
 import play.api.libs.json._
-
-/**
-  * Created by dfom on 22.01.2017.
-  */
-import play.api.libs.json._
 import play.api.libs.json.Reads._
 import play.api.libs.functional.syntax._
 
 object JsonConversion {
   implicit val loginRequestReads = Json.reads[LoginRequest]
   implicit val loginRequestWrites = Json.writes[LoginRequest]
-  implicit val loginFailedWrites = Json.writes[LoginFailed]
-  implicit val loginFailedReads = Json.reads[LoginFailed]
+  implicit val loginFailedReads: Reads[LoginFailed.type] = (
+    (JsPath \"$type").read[String].filter(ValidationError("expect login_failed"))(_ == "login_failed")
+    )(Reads((_:JsValue) => JsSuccess(LoginFailed)))
+  implicit val loginFailedWrites: Writes[LoginFailed.type] = (
+    (JsPath \ "$type").write[String]
+  )(unlift(Option(_:String)))
   implicit val loginSuccessfulWrites = Json.writes[LoginSuccessful]
   implicit val loginSuccessfulReads = Json.reads[LoginSuccessful]
   implicit val pingReads = Json.reads[Ping]
@@ -25,21 +24,14 @@ object JsonConversion {
   implicit val tableWrites = Json.writes[Table]
   implicit val tableListReads = Json.reads[TableList]
   implicit val tableListWrites = Json.writes[TableList]
-
-//  implicit val locationReads: Reads[Location] = (
-//    (JsPath \ "lat").read[Double](min(-90.0) keepAnd max(90.0)) and
-//      (JsPath \ "long").read[Double](min(-180.0) keepAnd max(180.0))
-//    )(Location.apply _)
-
   implicit val subscribeRequestReads: Reads[SubscribeRequest.type] = (
-    (JsPath \"$type").read[String](filter(ValidationError("expect subscribe_tables"))_ == "subscribe_tables")
-    and SubscribeRequest
+    (JsPath \"$type").read[String].filter(ValidationError("expect subscribe_tables"))(_ == "subscribe_tables")
   )(_ => SubscribeRequest)
-
-  //implicit val subscribeReads = Json.reads[SubscribeRequest]
-  //implicit val subscribeWrites = Json.writes[SubscribeRequest]
-  implicit val unsubscribeReads = Json.reads[UnsubscribeRequest]
-  implicit val unsubscribeWrites = Json.writes[UnsubscribeRequest]
+  implicit val subscribeRequestWrites = Json.writes[SubscribeRequest.type]
+  implicit val unsubscribeRequestReads: Reads[UnsubscribeRequest.type] = (
+    (JsPath \"$type").read[String].filter(ValidationError("expect unsubscribe_tables"))(_ == "unsubscribe_tables")
+    )(_ => UnsubscribeRequest)
+  implicit val unsubscribeRequestWrites = Json.writes[UnsubscribeRequest.type]
   implicit val tableAddedReads = Json.reads[TableAdded]
   implicit val tableAddedWrites = Json.writes[TableAdded]
   implicit val tableUpdatedReads = Json.reads[TableUpdated]
