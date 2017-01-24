@@ -8,12 +8,15 @@ import play.api.libs.functional.syntax._
 object JsonConversion {
   implicit val loginRequestReads = Json.reads[LoginRequest]
   implicit val loginRequestWrites = Json.writes[LoginRequest]
-  implicit val loginFailedReads: Reads[LoginFailed.type] = (
-    (JsPath \"$type").read[String].filter(ValidationError("expect login_failed"))(_ == "login_failed")
-    )(Reads((_:JsValue) => JsSuccess(LoginFailed)))
-  implicit val loginFailedWrites: Writes[LoginFailed.type] = (
-    (JsPath \ "$type").write[String]
-  )(unlift(Option(_:String)))
+  implicit object LoginFailedReads extends Reads[LoginFailed.type]{
+    def reads(json : JsValue) : JsResult[LoginFailed.type] = {
+      if((json \ "$type").as[String] == LoginFailed.$type) JsSuccess(LoginFailed)
+      else JsError("expect login_failed")
+    }
+  }
+  implicit object LoginFailedWrites extends OWrites[LoginFailed.type]{
+    def writes(o : LoginFailed.type):JsObject = Json.obj("$type" -> LoginFailed.$type)
+  }
   implicit val loginSuccessfulWrites = Json.writes[LoginSuccessful]
   implicit val loginSuccessfulReads = Json.reads[LoginSuccessful]
   implicit val pingReads = Json.reads[Ping]
