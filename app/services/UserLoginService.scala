@@ -30,7 +30,7 @@ class UserLoginService (conf: Configuration) extends Actor with ActorLogging {
 
   private def checkCredentialAndSendAnswer(wsOut:ActorRef, user: String, password: String): Unit = {
     val expected = credentials.get(user)
-    val response = expected.filter(_ == password).map(_ => LoginSuccessful(user).json).orElse(Some(LoginFailed().json))
+    val response = expected.filter(_ == password).map(_ => LoginSuccessful(user).json).orElse(Some(LoginFailed.json))
     response.foreach(resp => wsOut ! resp)
 
   }

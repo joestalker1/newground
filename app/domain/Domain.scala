@@ -26,9 +26,22 @@ case object UnsubscribeRequest extends DomainObj {
   val $type: String = "unsubscribe_tables"
 }
 
+case class AddTable(afterId: Int, table: Table, $type: String = "add_table") extends DomainObj
+
+case class UpdateTable(table: Table, $type: String = "update_table") extends DomainObj
+
+case class RemoveTable(id: Int, $type: String = "remove_table") extends DomainObj
+
 case class TableAdded(afterId: Int, table: Table, $type: String = "table_added") extends DomainObj
 
 case class TableUpdated(table: Table, $type: String = "table_updated") extends DomainObj
 
 case class TableRemoved(id: Int, $type: String = "table_removed") extends DomainObj
 
+case class RemovalFailed(id:Int,$type:String = "removal_failed") extends DomainObj
+
+case class UpdateFailed(id:Int,$type:String="update_failed") extends DomainObj
+
+case object NotAuthorized extends DomainObj {
+  val $type = "not_authorized"
+}

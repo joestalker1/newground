@@ -19,13 +19,13 @@ class NotifyService extends Actor with ActorLogging {
   override def receive: Receive = LoggingReceive {
     case Request(wsOut, json) =>
       //get Subscribe
-      val trySubcribe = json.domain[SubscribeRequest]
+      val trySubcribe = json.domain[SubscribeRequest.type]
       trySubcribe.right.foreach{ _ =>
         Option(subscribers.get).orElse(Option(List.empty)).foreach(list  => subscribers.set(wsOut :: list))
         context.system.eventStream.publish(GetTables(wsOut))
       }
       //get Unsubcribe
-      val tryUnsubcribe = trySubcribe.left.flatMap(_ => json.domain[UnsubscribeRequest])
+      val tryUnsubcribe = trySubcribe.left.flatMap(_ => json.domain[UnsubscribeRequest.type])
       tryUnsubcribe.right.foreach(_ => Option(subscribers.get).map(_.filter(_ != wsOut)).foreach(subscribers.set(_)))
     case _ =>
   }
