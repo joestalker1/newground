@@ -54,41 +54,62 @@ object JsonConversion {
   }
 
 
-  trait ConditionalReads[T <:DomainObj] extends Reads[T]{
-    val objReads = Json.reads[T]
-    val useReads: Boolean
+  trait ConditionalReads[T <: DomainObj : Reads] extends Reads[T]{
+    val objReads:Reads[T]
+    def useReads: JsValue => Boolean
+
     def reads(json : JsValue) : JsResult[T] = {
-      if (useReads) objReads.reads(json)
+      if (useReads(json)) objReads.reads(json)
       else JsError("unsuitable json")
     }
   }
 
-  implicit object AddTableReads extends ConditionalReads[AddTable]{
-    val useReads: Boolean =
-    def reads(json : JsValue) : JsResult[AddTable] = {
-      if((json \ "$type").as[String] == "add_table") addTableReads.reads(json)
-      else JsError("expect add_table")
-    }
+  implicit object AddTableReads extends ConditionalReads[AddTable] {
+    val useReads: JsValue => Boolean = json => (json \ "$type").as[String] == "add_table"
   }
   implicit val addTableWrites = Json.writes[AddTable]
 
-  //case class UpdateTable(table: Table, $type: String = "update_table") extends DomainObj
-  implicit object UpdateTableReads extends Reads[AddTable]{
-    val updateTableReads = Json.reads[UpdateTable]
-    def reads(json : JsValue) : JsResult[AddTable] = {
-      if((json \ "$type").as[String] == "add_table") addTableReads.reads(json)
-      else JsError("expect add_table")
-    }
+  implicit object UpdateTableReads extends ConditionalReads[UpdateTable] {
+    val useReads: JsValue => Boolean = json => (json \ "$type").as[String] == "update_table"
   }
+  implicit val updateTableWrites = Json.writes[UpdateTable]
 
+  implicit object RemoveTableReads extends ConditionalReads[RemoveTable] {
+    val useReads: JsValue => Boolean = json => (json \ "$type").as[String] == "remove_table"
+  }
+  implicit val removeTableWrites = Json.writes[RemoveTable]
 
-
-  implicit val tableAddedReads = Json.reads[TableAdded]
+  implicit object TableAddedReads extends ConditionalReads[TableAdded] {
+    val useReads: JsValue => Boolean = json => (json \ "$type").as[String] == "table_added"
+  }
   implicit val tableAddedWrites = Json.writes[TableAdded]
-  implicit val tableUpdatedReads = Json.reads[TableUpdated]
+
+  implicit object TableUpdatedReads extends ConditionalReads[TableUpdated] {
+    val useReads: JsValue => Boolean = json => (json \ "$type").as[String] == "table_updated"
+  }
   implicit val tableUpdatedWrites = Json.writes[TableUpdated]
-  implicit val tableRemovedReads = Json.reads[TableRemoved]
+
+  implicit object TableRemovedReads extends ConditionalReads[TableRemoved] {
+    val useReads: JsValue => Boolean = json => (json \ "$type").as[String] == "table_removed"
+  }
   implicit val tableRemovedWrites = Json.writes[TableRemoved]
+
+  implicit object RemovalFailedReads extends ConditionalReads[RemovalFailed] {
+    val useReads: JsValue => Boolean = json => (json \ "$type").as[String] == "removal_failed"
+  }
+  implicit val removalFailedWrites = Json.writes[RemovalFailed]
+
+  implicit object UpdateFailedReads extends ConditionalReads[UpdateFailed] {
+    val useReads: JsValue => Boolean = json => (json \ "$type").as[String] == "update_failed"
+  }
+  implicit val updateFailedWrites = Json.writes[UpdateFailed]
+
+  implicit object NotAuthorizedReads extends ConditionalReads[NotAuthorized.type] {
+    val useReads: JsValue => Boolean = json => (json \ "$type").as[String] == NotAuthorized.$type
+  }
+  implicit object NotAuthorizedWrites extends OWrites[NotAuthorized.type]{
+    def writes(o : NotAuthorized.type): JsObject = Json.obj("$type" -> NotAuthorized.$type)
+  }
 
   implicit class AsJson[A <: DomainObj](val obj: A) {
     def json(implicit env: Writes[A]): JsValue = Json.toJson(obj)
