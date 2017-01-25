@@ -25,8 +25,10 @@ class NotifyService extends Actor with ActorLogging {
         context.system.eventStream.publish(GetTables(wsOut))
       }
       //get Unsubcribe
-      val tryUnsubcribe = trySubcribe.left.flatMap(_ => json.domain[UnsubscribeRequest.type])
-      tryUnsubcribe.right.foreach(_ => Option(subscribers.get).map(_.filter(_ != wsOut)).foreach(subscribers.set(_)))
+      for {
+        _ <- trySubcribe.left
+        _ <- json.domain[UnsubscribeRequest.type].right
+      } yield Option(subscribers.get).map(_.filter(_ != wsOut)).foreach(subscribers.set(_))
     case _ =>
   }
 

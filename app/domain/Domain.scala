@@ -14,7 +14,7 @@ case class Ping(seq: Int, $type: String = "ping") extends DomainObj
 
 case class Pong(seq: Int, $type: String = "pong") extends DomainObj
 
-case class Table(id: Int, name: String, participants: Int) extends DomainObj
+case class Table( name: String, participants: Int,id: Option[Long] = None) extends DomainObj
 
 case class TableList(tables: Seq[Table], $type: String = "table_list") extends DomainObj
 
@@ -26,13 +26,13 @@ case object UnsubscribeRequest extends DomainObj {
   val $type: String = "unsubscribe_tables"
 }
 
-case class AddTable(afterId: Int, table: Table, $type: String = "add_table") extends DomainObj
+case class AddTable(after_id: Int, table: Table, $type: String = "add_table") extends DomainObj
 
 case class UpdateTable(table: Table, $type: String = "update_table") extends DomainObj
 
 case class RemoveTable(id: Int, $type: String = "remove_table") extends DomainObj
 
-case class TableAdded(afterId: Int, table: Table, $type: String = "table_added") extends DomainObj
+case class TableAdded(after_id: Int, table: Table, $type: String = "table_added") extends DomainObj
 
 case class TableUpdated(table: Table, $type: String = "table_updated") extends DomainObj
 
