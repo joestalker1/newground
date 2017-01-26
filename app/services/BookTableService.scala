@@ -29,18 +29,17 @@ class BookTableService extends Actor with ActorLogging {
        val tryAddTable =  json.domain[AddTable]
        tryAddTable.right.foreach{case AddTable(afterId, table, _) =>
            Option(tables.get()).map{list =>
-             val newList = if(afterId == -1 || list.isEmpty) table.copy(id = Some(getId)) :: list
+             val ntable = table.copy(id = Some(getId))
+             val newList = if(afterId == -1 || list.isEmpty) ntable :: list
              else {
-               val left = list.takeWhile(_.id.exists(_!= afterId))
-               val diff = list.diff(left)
-               if(diff.nonEmpty) {
-                 val right = diff.tail
-                 val after = diff.head
-                 (left :+ after :+ table.copy(id = Some(getId))) ++ right
-               } else left :+ table.copy(id=Some(getId))
+               val nlist = list.foldLeft(List.empty[Table]){(l,t) =>
+                 if(t.id.exists(_ == afterId))  ntable :: t :: l
+                 else t :: l
+               }
+               nlist.reverse
              }
              tables.set(newList)
-             receiver ! TableAdded(afterId, table).json
+             if(newList.size > list.size) receiver ! TableAdded(afterId, ntable).json
            }
        }
       for {
@@ -49,11 +48,11 @@ class BookTableService extends Actor with ActorLogging {
       } yield {
         val UpdateTable(table, _) = r
         Option(tables.get).filter(_.exists(_.id == table.id)).foreach{list =>
-          val left = list.takeWhile(_.id != table.id)//last is table that is changed
-          val nleft = if(left.nonEmpty) left.init else left
-          val right = list.diff(left)
-          val nright = if(right.nonEmpty) right.tail else right
-          tables.set((nleft :+ table) ++ nright)
+          val nlist = list.foldLeft(List.empty[Table]){(l, t) =>
+            if(t.id.exists(_ == table.id.get))  table :: l
+            else t :: list
+          }
+          tables.set(nlist.reverse)
           receiver ! TableUpdated(table).json
         }
       }
@@ -63,9 +62,8 @@ class BookTableService extends Actor with ActorLogging {
         r <- json.domain[RemoveTable].right
       } yield {
         val RemoveTable(id,_) = r
-        Option(tables.get).foreach{list =>
-          val newList = list.filter(_.id != id)
-          tables.set(newList)
+        Option(tables.get).filter(_.exists(_.id == id)).foreach{list =>
+          tables.set(list.filter(_.id != id))
           receiver ! TableRemoved(id).json
         }
       }

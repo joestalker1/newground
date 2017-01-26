@@ -14,7 +14,7 @@ case class Ping(seq: Int, $type: String = "ping") extends DomainObj
 
 case class Pong(seq: Int, $type: String = "pong") extends DomainObj
 
-case class Table( name: String, participants: Int,id: Option[Long] = None) extends DomainObj
+case class Table(name: String, participants: Int,id: Option[Long] = None) extends DomainObj
 
 case class TableList(tables: Seq[Table], $type: String = "table_list") extends DomainObj
 

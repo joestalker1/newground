@@ -27,7 +27,19 @@ object JsonConversion {
   implicit val pongReads = Json.reads[Pong]
   implicit val pongWrites = Json.writes[Pong]
   implicit val tableReads = Json.reads[Table]
-  implicit val tableWrites = Json.writes[Table]
+  implicit val tableWrites = new OWrites[Table]{
+    def writes(o : Table): JsObject =
+      o.id.map{id => Json.obj(
+        "id" -> id,
+        "name" -> o.name,
+        "participants" -> o.participants)
+      } getOrElse {
+        Json.obj(
+          "name" -> o.name,
+          "participants" -> o.participants
+        )
+      }
+  }
   implicit val tableListReads = Json.reads[TableList]
   implicit val tableListWrites = Json.writes[TableList]
 
