@@ -23,7 +23,7 @@ class BookTableService extends Actor with ActorLogging {
   def getId() = counter.getAndIncrement()
 
   override def receive: Receive = LoggingReceive {
-    case GetTables(receiver) => Option(tables.get).foreach(receiver ! TableList(_).json)
+    case GetTables(receiver) => Option(tables.get).foreach(receiver ! TableList(_))
 
     case Request(receiver, json)=>
        val tryAddTable =  json.domain[AddTable]
@@ -39,7 +39,10 @@ class BookTableService extends Actor with ActorLogging {
                nlist.reverse
              }
              tables.set(newList)
-             if(newList.size > list.size) receiver ! TableAdded(afterId, ntable).json
+             if(newList.size > list.size) {
+               receiver ! TableAdded(afterId, ntable).json
+               context.system.eventStream.publish(TableAddedMsg)
+             }
            }
        }
       for {
@@ -47,28 +50,42 @@ class BookTableService extends Actor with ActorLogging {
          r  <- json.domain[UpdateTable].right
       } yield {
         val UpdateTable(table, _) = r
-        Option(tables.get).filter(_.exists(_.id == table.id)).foreach{list =>
-          val nlist = list.foldLeft(List.empty[Table]){(l, t) =>
-            if(t.id.exists(_ == table.id.get))  table :: l
-            else t :: list
+        for {
+          list <- Option(tables.get)//Option and Either are different monads I can't combine them.
+          tid <- table.id
+          if(list.exists(_.id.exists(_ == tid)))
+        } yield {
+          val nlist = list.foldLeft(List.empty[Table]){(res, t) =>
+            if(t.id.exists(_ == tid))  table :: res
+            else t :: res
           }
           tables.set(nlist.reverse)
           receiver ! TableUpdated(table).json
+          context.system.eventStream.publish(TableUpdatedMsg)
         }
-      }
+       }
       for {
         _ <- tryAddTable.left
         _ <- json.domain[UpdateTable].left
         r <- json.domain[RemoveTable].right
       } yield {
-        val RemoveTable(id,_) = r
-        Option(tables.get).filter(_.exists(_.id == id)).foreach{list =>
-          tables.set(list.filter(_.id != id))
-          receiver ! TableRemoved(id).json
+        val RemoveTable(tid, _) = r
+        Option(tables.get).filter(_.exists(_.id.exists(_ == tid))).foreach{lst =>
+          tables.set(lst.filterNot(_.id.exists(_ == tid)))
+          receiver ! TableRemoved(tid).json
+          context.system.eventStream.publish(TableRemovedMsg)
         }
       }
+
   }
 
 }
 
-case class GetTables(receiver:ActorRef) extends Message
+trait EmptyMessage extends Message {
+  val receiver: ActorRef = ActorRef.noSender
+}
+case class GetTables(receiver: ActorRef) extends Message
+case object TableAddedMsg extends EmptyMessage
+case object TableRemovedMsg extends EmptyMessage
+case object TableUpdatedMsg extends EmptyMessage
+

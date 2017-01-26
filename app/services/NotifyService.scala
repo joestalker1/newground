@@ -1,9 +1,10 @@
 package services
 
 import java.util.concurrent.atomic.AtomicReference
+
 import akka.actor.{Actor, ActorLogging, ActorRef}
 import akka.event.LoggingReceive
-import domain.{SubscribeRequest, UnsubscribeRequest}
+import domain.{SubscribeRequest, TableList, UnsubscribeRequest}
 import domain.JsonConversion._
 
 /**
@@ -20,16 +21,18 @@ class NotifyService extends Actor with ActorLogging {
     case Request(wsOut, json) =>
       //get Subscribe
       val trySubcribe = json.domain[SubscribeRequest.type]
-      trySubcribe.right.foreach{ _ =>
-        Option(subscribers.get).orElse(Option(List.empty)).foreach(list  => subscribers.set(wsOut :: list))
-        context.system.eventStream.publish(GetTables(wsOut))
+      trySubcribe.right.foreach { _ =>
+        Option(subscribers.get).foreach(list  => subscribers.set(wsOut :: list))
       }
       //get Unsubcribe
       for {
         _ <- trySubcribe.left
         _ <- json.domain[UnsubscribeRequest.type].right
       } yield Option(subscribers.get).map(_.filter(_ != wsOut)).foreach(subscribers.set(_))
-    case _ =>
+    case TableAddedMsg | TableRemovedMsg | TableUpdatedMsg =>
+      Option(subscribers.get).foreach(_ => context.system.eventStream.publish(GetTables(self)))
+    case tlist : TableList => val json = tlist.json //receive from BookTableService
+      Option(subscribers.get).foreach(list => list.foreach(_ ! json))
   }
 
 }

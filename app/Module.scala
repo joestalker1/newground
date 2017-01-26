@@ -5,8 +5,8 @@ class Module extends AbstractModule with AkkaGuiceSupport {
   import services._
 
   override def configure(): Unit = {
-    bindActor[EventPublisherLauncher]("eventPublisherLauncher")
-    bindActorFactory[EventPublisher, EventPublisherFactory]
+    bindActor[ApiGatewayLauncher]("apiGatewayLauncher")
+    bindActorFactory[ApiGateway, ApiGatewayFactory]
     bind(classOf[ServicesLauncher])
   }
 }

@@ -15,11 +15,11 @@ import javax.inject._
 
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}
-import services.{EventPublisherLauncher, ServicesLauncher}
+import services.{ApiGatewayLauncher, ServicesLauncher}
 import akka.pattern._
 
 @Singleton
-class AppController @Inject()(@Named("eventPublisherLauncher") eventPublisherLauncher: ActorRef,servicesLauncher: ServicesLauncher)(implicit actorSystem: ActorSystem, mat: Materializer, ec: ExecutionContext) extends Controller {
+class AppController @Inject()(@Named("apiGatewayLauncher") apiGatewayLauncher: ActorRef,servicesLauncher: ServicesLauncher)(implicit actorSystem: ActorSystem, mat: Materializer, ec: ExecutionContext) extends Controller {
 
   private val logger = org.slf4j.LoggerFactory.getLogger("LoginController")
 
@@ -78,6 +78,6 @@ class AppController @Inject()(@Named("eventPublisherLauncher") eventPublisherLau
   def createEventPublisher(webSocketOut: ActorRef): Future[ActorRef] = {
     // Use guice assisted injection
     implicit val timeout = Timeout(100.millis)
-    (eventPublisherLauncher ? EventPublisherLauncher.Create(webSocketOut)).mapTo[ActorRef]
+    (apiGatewayLauncher ? ApiGatewayLauncher.Create(webSocketOut)).mapTo[ActorRef]
   }
 }

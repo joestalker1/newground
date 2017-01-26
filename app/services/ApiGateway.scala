@@ -10,30 +10,30 @@ import play.api.libs.concurrent.InjectedActorSupport
 /**
   * Created by dfom on 22.01.2017.
   */
-class EventPublisher @Inject()(@Assisted wsOut: ActorRef) extends Actor with ActorLogging {
+class ApiGateway @Inject()(@Assisted wsOut: ActorRef) extends Actor with ActorLogging {
   override def receive: Receive = LoggingReceive {
     case json: JsValue => context.system.eventStream.publish(Request(wsOut, json))
   }
 }
 
-trait EventPublisherFactory {
+trait ApiGatewayFactory {
   def apply(wsOut: ActorRef): Actor
 }
 
 case class Request(receiver: ActorRef, payload: JsValue) extends Message
 
-class EventPublisherLauncher @Inject()(eventPublisherFactory: EventPublisherFactory) extends Actor with InjectedActorSupport with ActorLogging {
+class ApiGatewayLauncher @Inject()(factory: ApiGatewayFactory) extends Actor with InjectedActorSupport with ActorLogging {
 
-  import EventPublisherLauncher._
+  import ApiGatewayLauncher._
 
   override def receive: Receive = LoggingReceive {
     case Create(out) =>
-      val child: ActorRef = injectedChild(eventPublisherFactory(out), "eventPublisher:" + System.nanoTime())
+      val child: ActorRef = injectedChild(factory(out), "apiGateway:" + System.nanoTime())
       sender() ! child
   }
 }
 
 
-object EventPublisherLauncher {
+object ApiGatewayLauncher {
   case class Create(out: ActorRef)
 }
