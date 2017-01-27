@@ -6,7 +6,7 @@ import akka.actor.{Actor, ActorSystem, Props}
 import play.api.Configuration
 
 /**
-  * Created by dfom on 23.01.2017.
+  * Locate services using by [[ApiGateway]].It creates and locates services for [[ApiGateway]].
   */
 class ServiceLocator @Inject()(conf: Configuration) extends Actor {
   val userLoginService = context.system.actorOf(Props(new UserLoginService(conf)), "userLoginService:" + System.nanoTime())
@@ -23,6 +23,9 @@ class ServiceLocator @Inject()(conf: Configuration) extends Actor {
 }
 
 case object GetUserLoginService extends EmptyMessage
+
 case object GetPingService extends EmptyMessage
+
 case object GetNotifyService extends EmptyMessage
+
 case object GetBookTableService extends EmptyMessage

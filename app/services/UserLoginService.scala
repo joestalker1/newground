@@ -6,6 +6,10 @@ import domain.{LoginFailed, LoginRequest, LoginSuccessful}
 import play.api.Configuration
 import domain.JsonConversion._
 
+/**
+  * Authorize an user.
+  *
+  */
 class UserLoginService(conf: Configuration) extends Actor with ActorLogging {
   val credentials = loadCredentials()
 

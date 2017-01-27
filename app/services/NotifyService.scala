@@ -8,7 +8,8 @@ import domain.{SubscribeRequest, TableList, UnsubscribeRequest}
 import domain.JsonConversion._
 
 /**
-  * Created by dfom on 22.01.2017.
+  * Sends notification table updates.
+  *
   */
 class NotifyService extends Actor with ActorLogging {
   val subscribers = new AtomicReference[List[ActorRef]](List.empty)

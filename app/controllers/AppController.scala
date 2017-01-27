@@ -18,21 +18,30 @@ import scala.concurrent.{ExecutionContext, Future}
 import services.ApiGatewayLauncher
 import akka.pattern._
 
+/**
+  * Web controller providers enty point for websocket clients.Creates [[ApiGateway]] to communicate with clients.
+  *
+  * @param apiGatewayLauncher
+  * @param serviceLocator
+  * @param actorSystem
+  * @param mat
+  * @param ec
+  */
 @Singleton
-class AppController @Inject()(@Named("apiGatewayLauncher") apiGatewayLauncher: ActorRef,@Named("serviceLocator") serviceLocator: ActorRef)(implicit actorSystem: ActorSystem, mat: Materializer, ec: ExecutionContext) extends Controller {
+class AppController @Inject()(@Named("apiGatewayLauncher") apiGatewayLauncher: ActorRef, @Named("serviceLocator") serviceLocator: ActorRef)(implicit actorSystem: ActorSystem, mat: Materializer, ec: ExecutionContext) extends Controller {
 
   private val logger = org.slf4j.LoggerFactory.getLogger("LoginController")
 
   def ws: WebSocket = WebSocket.acceptOrResult[JsValue, JsValue] { rh =>
-      toFutureFlow(rh).map { flow =>
-        Right(flow)
-      }.recover {
-        case e: Exception =>
-          logger.error("Cannot create websocket", e)
-          val jsError = Json.obj("error" -> "Cannot create websocket to login")
-          val result = InternalServerError(jsError)
-          Left(result)
-      }
+    toFutureFlow(rh).map { flow =>
+      Right(flow)
+    }.recover {
+      case e: Exception =>
+        logger.error("Cannot create websocket", e)
+        val jsError = Json.obj("error" -> "Cannot create websocket to login")
+        val result = InternalServerError(jsError)
+        Left(result)
+    }
 
   }
 

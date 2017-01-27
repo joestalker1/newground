@@ -1,5 +1,8 @@
 package domain
 
+/**
+  * Domain objects
+  */
 sealed trait DomainObj
 
 case class LoginRequest(username: String, password: String, $type: String = "login") extends DomainObj
@@ -14,7 +17,7 @@ case class Ping(seq: Int, $type: String = "ping") extends DomainObj
 
 case class Pong(seq: Int, $type: String = "pong") extends DomainObj
 
-case class Table(name: String, participants: Int,id: Option[Long] = None) extends DomainObj
+case class Table(name: String, participants: Int, id: Option[Long] = None) extends DomainObj
 
 case class TableList(tables: Seq[Table], $type: String = "table_list") extends DomainObj
 
@@ -38,9 +41,9 @@ case class TableUpdated(table: Table, $type: String = "table_updated") extends D
 
 case class TableRemoved(id: Int, $type: String = "table_removed") extends DomainObj
 
-case class RemovalFailed(id:Int,$type:String = "removal_failed") extends DomainObj
+case class RemovalFailed(id: Int, $type: String = "removal_failed") extends DomainObj
 
-case class UpdateFailed(id:Int,$type:String="update_failed") extends DomainObj
+case class UpdateFailed(id: Int, $type: String = "update_failed") extends DomainObj
 
 case object NotAuthorized extends DomainObj {
   val $type = "not_authorized"

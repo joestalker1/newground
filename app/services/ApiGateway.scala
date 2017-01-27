@@ -10,14 +10,16 @@ import play.api.libs.concurrent.InjectedActorSupport
 import play.api.libs.json._
 import akka.pattern._
 import akka.util.Timeout
-import domain.{LoginRequest, LoginSuccessful, NotAuthorized,LoginFailed}
+import domain.{LoginRequest, LoginSuccessful, NotAuthorized, LoginFailed}
 
 import scala.concurrent.duration._
 import scala.concurrent.ExecutionContext.Implicits.global
 import domain.JsonConversion._
 
 /**
-  * Created by dfom on 22.01.2017.
+  * Communicate with a clients, govern user authorization to services.Holds an actor to work with a websocket client.For every clients it creates own [[ApiGateway]].
+  * But all that share services.
+  *
   */
 class ApiGateway @Inject()(@Assisted wsOut: ActorRef, @Named("serviceLocator") serviceLocator: ActorRef) extends Actor with ActorLogging {
   val nameToMessage = Map("login" -> GetUserLoginService,
@@ -32,17 +34,17 @@ class ApiGateway @Inject()(@Assisted wsOut: ActorRef, @Named("serviceLocator") s
 
   override def receive: Receive = LoggingReceive {
     case json: JsValue =>
-      for(_ <- json.domain[LoginRequest].right) yield findAndCall("login", json, self)
+      for (_ <- json.domain[LoginRequest].right) yield findAndCall("login", json, self)
 
-      for(resp <- json.domain[LoginSuccessful].right) yield {
-        if(isAdmin(resp.userType)) context.become(forAdmin)
+      for (resp <- json.domain[LoginSuccessful].right) yield {
+        if (isAdmin(resp.userType)) context.become(forAdmin)
         else context.become(forUser)
         wsOut forward json
       }
 
-      for(_ <- json.domain[LoginFailed.type].right) yield wsOut forward json
+      for (_ <- json.domain[LoginFailed.type].right) yield wsOut forward json
 
-   case _ =>
+    case _ =>
   }
 
   def forAdmin: Receive = LoggingReceive {
@@ -59,8 +61,8 @@ class ApiGateway @Inject()(@Assisted wsOut: ActorRef, @Named("serviceLocator") s
     case json: JsValue =>
       implicit val timeout = Timeout(100.millis)
       (json \ "$type").toOption match {
-        case Some(s: JsString) => if(prohibitedUserOps(s.value)) wsOut ! NotAuthorized.json
-                                  else findAndCall(s.value, json, wsOut) ///Added filter by table requests!!!
+        case Some(s: JsString) => if (prohibitedUserOps(s.value)) wsOut ! NotAuthorized.json
+        else findAndCall(s.value, json, wsOut) ///Added filter by table requests!!!
         case _ =>
       }
     case _ =>
@@ -68,7 +70,7 @@ class ApiGateway @Inject()(@Assisted wsOut: ActorRef, @Named("serviceLocator") s
 
   private def isAdmin(user: String): Boolean = user == "admin"
 
-  private def findAndCall(serviceName: String,json: JsValue,receiver: ActorRef):Unit = {
+  private def findAndCall(serviceName: String, json: JsValue, receiver: ActorRef): Unit = {
     implicit val timeout = Timeout(100.millis)
     nameToMessage.get(serviceName).foreach { msg =>
       (serviceLocator ? msg).mapTo[ActorRef].map(_ ! ServiceRequest(receiver, json))
