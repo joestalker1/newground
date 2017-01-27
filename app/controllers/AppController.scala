@@ -15,11 +15,11 @@ import javax.inject._
 
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}
-import services.{ApiGatewayLauncher, ServicesLauncher}
+import services.ApiGatewayLauncher
 import akka.pattern._
 
 @Singleton
-class AppController @Inject()(@Named("apiGatewayLauncher") apiGatewayLauncher: ActorRef,servicesLauncher: ServicesLauncher)(implicit actorSystem: ActorSystem, mat: Materializer, ec: ExecutionContext) extends Controller {
+class AppController @Inject()(@Named("apiGatewayLauncher") apiGatewayLauncher: ActorRef,@Named("serviceLocator") serviceLocator: ActorRef)(implicit actorSystem: ActorSystem, mat: Materializer, ec: ExecutionContext) extends Controller {
 
   private val logger = org.slf4j.LoggerFactory.getLogger("LoginController")
 
@@ -38,9 +38,7 @@ class AppController @Inject()(@Named("apiGatewayLauncher") apiGatewayLauncher: A
 
   def toFutureFlow(request: RequestHeader): Future[Flow[JsValue, JsValue, NotUsed]] = {
     val (webSocketOut: ActorRef, webSocketIn: Publisher[JsValue]) = createWebSocketConnections()
-
-    val serviceFuture = createEventPublisher(webSocketOut)
-
+    val serviceFuture = createApiGateway(webSocketOut)
     serviceFuture.map { service =>
       createWebSocketFlow(webSocketIn, service)
     }
@@ -75,7 +73,7 @@ class AppController @Inject()(@Named("apiGatewayLauncher") apiGatewayLauncher: A
     flowWatch
   }
 
-  def createEventPublisher(webSocketOut: ActorRef): Future[ActorRef] = {
+  def createApiGateway(webSocketOut: ActorRef): Future[ActorRef] = {
     // Use guice assisted injection
     implicit val timeout = Timeout(100.millis)
     (apiGatewayLauncher ? ApiGatewayLauncher.Create(webSocketOut)).mapTo[ActorRef]

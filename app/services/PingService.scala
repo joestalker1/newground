@@ -18,7 +18,7 @@ class PingService extends Actor with ActorLogging {
   override def postStop = context.system.eventStream.unsubscribe(self)
 
   override def receive: Receive = LoggingReceive {
-    case Request(wsOut, json) =>
+    case ServiceRequest(wsOut, json) =>
       json.domain[Ping] match {
         case Right(Ping(seq, _)) => wsOut ! Pong(seq).json
         case Left(ex: Throwable) =>

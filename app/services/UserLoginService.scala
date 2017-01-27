@@ -6,12 +6,8 @@ import domain.{LoginFailed, LoginRequest, LoginSuccessful}
 import play.api.Configuration
 import domain.JsonConversion._
 
-class UserLoginService (conf: Configuration) extends Actor with ActorLogging {
+class UserLoginService(conf: Configuration) extends Actor with ActorLogging {
   val credentials = loadCredentials()
-
-  override def preStart = context.system.eventStream.subscribe(self, classOf[Message])
-
-  override def postStop = context.system.eventStream.unsubscribe(self)
 
   def loadCredentials(): Map[String, String] = {
     import collection.JavaConversions._
@@ -21,21 +17,16 @@ class UserLoginService (conf: Configuration) extends Actor with ActorLogging {
   }
 
   override def receive: Receive = LoggingReceive {
-    case Request(wsOut, json) =>
+    case ServiceRequest(wsOut, json) =>
       json.domain[LoginRequest] match {
         case Right(LoginRequest(user, password, _)) => checkCredentialAndSendAnswer(wsOut, user, password)
         case Left(ex: Throwable) =>
       }
   }
 
-  private def checkCredentialAndSendAnswer(wsOut:ActorRef, user: String, password: String): Unit = {
+  private def checkCredentialAndSendAnswer(wsOut: ActorRef, user: String, password: String): Unit = {
     val expected = credentials.get(user)
     val response = expected.filter(_ == password).map(_ => LoginSuccessful(user).json).orElse(Some(LoginFailed.json))
-    response.foreach(resp => wsOut ! resp)
-
+    response.foreach(wsOut ! _)
   }
-}
-
-trait UserLoginServiceFactory {
-  def apply(wsOut: ActorRef): Actor
 }

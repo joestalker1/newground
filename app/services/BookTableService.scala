@@ -25,7 +25,7 @@ class BookTableService extends Actor with ActorLogging {
   override def receive: Receive = LoggingReceive {
     case GetTables(receiver) => Option(tables.get).foreach(receiver ! TableList(_))
 
-    case Request(receiver, json)=>
+    case ServiceRequest(receiver, json)=>
        val tryAddTable =  json.domain[AddTable]
        tryAddTable.right.foreach{case AddTable(afterId, table, _) =>
            Option(tables.get()).map{list =>
@@ -81,9 +81,6 @@ class BookTableService extends Actor with ActorLogging {
 
 }
 
-trait EmptyMessage extends Message {
-  val receiver: ActorRef = ActorRef.noSender
-}
 case class GetTables(receiver: ActorRef) extends Message
 case object TableAddedMsg extends EmptyMessage
 case object TableRemovedMsg extends EmptyMessage

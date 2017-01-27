@@ -6,7 +6,7 @@ class Module extends AbstractModule with AkkaGuiceSupport {
 
   override def configure(): Unit = {
     bindActor[ApiGatewayLauncher]("apiGatewayLauncher")
+    bindActor[ServiceLocator]("serviceLocator")
     bindActorFactory[ApiGateway, ApiGatewayFactory]
-    bind(classOf[ServicesLauncher])
   }
 }

@@ -8,3 +8,7 @@ import akka.actor.ActorRef
 trait Message {
    val receiver: ActorRef
 }
+
+trait EmptyMessage extends Message {
+   val receiver: ActorRef = ActorRef.noSender
+}

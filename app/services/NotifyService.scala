@@ -18,7 +18,7 @@ class NotifyService extends Actor with ActorLogging {
   override def postStop = context.system.eventStream.unsubscribe(self)
 
   override def receive: Receive = LoggingReceive {
-    case Request(wsOut, json) =>
+    case ServiceRequest(wsOut, json) =>
       //get Subscribe
       val trySubcribe = json.domain[SubscribeRequest.type]
       trySubcribe.right.foreach { _ =>
