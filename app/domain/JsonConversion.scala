@@ -151,8 +151,11 @@ object JsonConversion {
     def json(implicit env: Writes[A]): JsValue = Json.toJson(obj)
   }
 
+  sealed trait JsonError
+  case class NotAJson(x: String) extends JsonError
+
   implicit class AsDomainObj(val json: JsValue) {
-    def domain[A <: DomainObj](implicit env: Reads[A]): Either[Throwable, A] = {
+    def domain[A <: DomainObj](implicit env: Reads[A]): Either[JsonError, A] = {
       Json.fromJson[A](json) match {
         case JsSuccess(o, _) => Right(o)
         case JsError(errors) =>
@@ -160,13 +163,15 @@ object JsonConversion {
             sbf.append(jpath.path.map(_.toJsonString).mkString(",") + ":" + seq.map(_.message).mkString(","))
             sbf
           }
-          Left(new NoSuchElementException(errMsg.toString()))
+          Left(NotAJson(errMsg.toString()))
       }
     }
   }
 
-  implicit class toJson(val ex: Throwable) extends AnyVal {
-    def json: JsValue = Json.obj("$type" -> "exception", "reason" -> ex.toString)
+  implicit class toJson(val error: JsonError) extends AnyVal {
+    def json: JsValue = error match {
+      case NotAJson(x) => Json.obj("$type" -> "exception", "reason" -> error.toString)
+      case _: JsonError => Json.obj("$type" ->"exception")
+    }
   }
-
 }

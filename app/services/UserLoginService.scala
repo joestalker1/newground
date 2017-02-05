@@ -24,7 +24,7 @@ class UserLoginService(conf: Configuration) extends Actor with ActorLogging {
     case ServiceRequest(wsOut, json) =>
       json.domain[LoginRequest] match {
         case Right(LoginRequest(user, password, _)) => checkCredentialAndSendAnswer(wsOut, user, password)
-        case Left(ex: Throwable) =>
+        case Left(_) =>
       }
   }
 

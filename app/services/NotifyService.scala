@@ -1,18 +1,17 @@
 package services
 
-import java.util.concurrent.atomic.AtomicReference
-
 import akka.actor.{Actor, ActorLogging, ActorRef}
 import akka.event.LoggingReceive
 import domain.{SubscribeRequest, TableList, UnsubscribeRequest}
 import domain.JsonConversion._
+import cats.syntax.either._
 
 /**
   * Sends notification table updates.
   *
   */
 class NotifyService extends Actor with ActorLogging {
-  val subscribers = new AtomicReference[List[ActorRef]](List.empty)
+  var subscribers = List.empty[ActorRef]
 
   override def preStart = context.system.eventStream.subscribe(self, classOf[Message])
 
@@ -20,20 +19,17 @@ class NotifyService extends Actor with ActorLogging {
 
   override def receive: Receive = LoggingReceive {
     case ServiceRequest(wsOut, json) =>
-      //get Subscribe
-      val trySubcribe = json.domain[SubscribeRequest.type]
-      trySubcribe.right.foreach { _ =>
-        Option(subscribers.get).foreach(list  => subscribers.set(wsOut :: list))
-      }
-      //get Unsubcribe
-      for {
-        _ <- trySubcribe.left
-        _ <- json.domain[UnsubscribeRequest.type].right
-      } yield Option(subscribers.get).map(_.filter(_ != wsOut)).foreach(subscribers.set(_))
+      //get Subscribe or Unsubcribe
+      val trySubcribe = json.domain[SubscribeRequest.type].map(_ => Option(subscribers).foreach(list  => subscribers = wsOut :: list))
+
+      trySubcribe.orElse(json.domain[UnsubscribeRequest.type]
+          .map(_ => Option(subscribers).map(_.filter(_ != wsOut)).foreach(subscribers = _)))
+
     case TableAddedMsg | TableRemovedMsg | TableUpdatedMsg =>
-      Option(subscribers.get).foreach(_ => context.system.eventStream.publish(GetTables(self)))
+      Option(subscribers).foreach(_ => context.system.eventStream.publish(GetTables(self)))
+
     case tlist : TableList => val json = tlist.json //receive from BookTableService
-      Option(subscribers.get).foreach(list => list.foreach(_ ! json))
+      Option(subscribers).foreach(list => list.foreach(_ ! json))
   }
 
 }

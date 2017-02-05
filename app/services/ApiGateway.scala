@@ -10,11 +10,14 @@ import play.api.libs.concurrent.InjectedActorSupport
 import play.api.libs.json._
 import akka.pattern._
 import akka.util.Timeout
-import domain.{LoginRequest, LoginSuccessful, NotAuthorized, LoginFailed}
+import domain.{LoginRequest, LoginSuccessful, NotAuthorized}
 
 import scala.concurrent.duration._
 import scala.concurrent.ExecutionContext.Implicits.global
 import domain.JsonConversion._
+import cats._
+import cats.implicits._
+import cats.syntax.either._
 
 /**
   * Communicate with a clients, govern user authorization to services.Holds an actor to work with a websocket client.For every clients it creates own [[ApiGateway]].
@@ -34,18 +37,18 @@ class ApiGateway @Inject()(@Assisted wsOut: ActorRef, @Named("serviceLocator") s
 
   override def receive: Receive = LoggingReceive {
     case json: JsValue =>
-      for (_ <- json.domain[LoginRequest].right) yield findAndCall("login", json, self)
-
-      for (resp <- json.domain[LoginSuccessful].right) yield {
-        if (isAdmin(resp.userType)) context.become(forAdmin)
-        else context.become(forUser)
-        wsOut forward json
-      }
-
-      for (_ <- json.domain[LoginFailed.type].right) yield wsOut forward json
-
+      json.domain[LoginRequest].map(_ => findAndCall("login", json, self))
+        .leftMap{_ =>
+          val tryLogingSuc = json.domain[LoginSuccessful]
+          tryLogingSuc.map { resp =>
+             selectHandler(resp)
+             wsOut forward json
+          }
+        }
     case _ =>
   }
+
+  def selectHandler(resp: LoginSuccessful): Unit = if (isAdmin(resp.userType)) context.become(forAdmin) else context.become(forUser)
 
   def forAdmin: Receive = LoggingReceive {
     case json: JsValue =>
