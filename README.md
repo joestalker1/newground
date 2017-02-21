@@ -17,6 +17,7 @@ or
  "user_type": "admin"
 }
 User types are "admin" or "user".
+
 Pinging the server
 The client can ping the server to check your connectivity. Client does a ping, including
 the sequence number (which allows to trace the exact ping duration).
@@ -55,6 +56,7 @@ Unsubscribing from the list of tables
  "$type": "unsubscribe_tables"
 }
 (No response from server is expected here);
+
 Privileged commands
 Only admins are allowed to use these commands, otherwise the server must respond
 with:
@@ -80,6 +82,7 @@ Update table
  "participants": 4
  }
 }
+
 Remove table
 {
  "$type": "remove_table",
@@ -87,6 +90,7 @@ Remove table
 }
 When user edits or removes a table client must do an optimistic UI update. However if
 server responds with failure - the optimistic update should be reverted.
+
 Possible failure event:
 {
  "$type": "removal_failed",
@@ -97,6 +101,7 @@ or
  "$type": "update_failed",
  "id": 3
 }
+
 Possible events from server
 New table added
 {
