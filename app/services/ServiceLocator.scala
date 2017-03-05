@@ -11,8 +11,8 @@ import play.api.Configuration
 class ServiceLocator @Inject()(conf: Configuration) extends Actor {
   val userLoginService = context.system.actorOf(Props(new UserLoginService(conf)), "userLoginService:" + System.nanoTime())
   val pingService = context.system.actorOf(Props[PingService], "pingService:" + System.nanoTime())
-  val notifyService = context.system.actorOf(Props[NotifyService], "notifyService:" + System.nanoTime())
-  val bookTableService = context.system.actorOf(Props[BookTableService], "bookTableService" + System.nanoTime())
+  val notifyService = context.system.actorOf(Props(new NotifyService("bookTableService")), "notifyService:" + System.nanoTime())
+  val bookTableService = context.system.actorOf(Props(new BookTableService("bookTableService")), "bookTableService" + System.nanoTime())
 
   override def receive: Receive = {
     case GetUserLoginService => sender ! userLoginService
