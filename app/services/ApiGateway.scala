@@ -1,6 +1,6 @@
 package services
 
-import akka.actor.{Actor, ActorLogging, ActorRef}
+import akka.actor.{Actor, ActorLogging, ActorRef, Terminated}
 import akka.event.LoggingReceive
 import com.google.inject.assistedinject.Assisted
 import play.api.libs.json.JsValue
@@ -35,18 +35,22 @@ class ApiGateway @Inject()(@Assisted wsOut: ActorRef, @Named("serviceLocator") s
 
   val prohibitedUserOps = Set("add_table", "update_table", "remove_table")
 
-  override def receive: Receive = LoggingReceive {
-    case json: JsValue =>
-      json.domain[LoginRequest].map(_ => findAndCall("login", json, self))
-        .leftMap{_ =>
-          val tryLogingSuc = json.domain[LoginSuccessful]
-          tryLogingSuc.map { resp =>
-             selectHandler(resp)
-             wsOut forward json
-          }
-        }
-    case _ =>
-  }
+  context.watch(serviceLocator)
+
+//  override def receive: Receive = LoggingReceive {
+//    case json: JsValue =>
+//      json.domain[LoginRequest].map(_ => findAndCall("login", json, self))
+//        .leftMap{_ =>
+//          val tryLogingSuc = json.domain[LoginSuccessful]
+//          tryLogingSuc.map { resp =>
+//             selectHandler(resp)
+//             wsOut forward json
+//          }
+//        }
+//    case _ =>
+//  }
+
+  override def receive:Receive = forAdmin
 
   def selectHandler(resp: LoginSuccessful): Unit = if (isAdmin(resp.userType)) context.become(forAdmin) else context.become(forUser)
 
@@ -57,7 +61,7 @@ class ApiGateway @Inject()(@Assisted wsOut: ActorRef, @Named("serviceLocator") s
         case Some(service: JsString) => findAndCall(service.value, json, wsOut)
         case _ =>
       }
-    case _ =>
+    case Terminated(actor) => context.unwatch(actor)
   }
 
   def forUser: Receive = LoggingReceive {

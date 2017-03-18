@@ -1,20 +1,26 @@
 package services
 
-import akka.actor.{Actor, ActorLogging, ActorRef}
+import akka.actor.{ActorLogging, ActorRef}
 import akka.event.LoggingReceive
-import akka.persistence.PersistentActor
+import akka.persistence.{PersistentActor, Recovery}
+import akka.persistence.journal.leveldb.SharedLeveldbJournal
 import domain.{UpdateTable, _}
 import domain.JsonConversion._
 import cats.syntax.either._
 import play.api.libs.json.{Reads, Writes}
 
-class BookTableService(serviceId: String) extends PersistentActor with ActorLogging {
+class BookTableService(serviceId: String,storeDB: ActorRef) extends PersistentActor with ActorLogging {
   override def persistenceId = serviceId
 
   var tables = List.empty[Table]
   var counter = 0l
 
-  override def preStart = context.system.eventStream.subscribe(self, classOf[Message])
+  override def recovery = Recovery.none
+
+  override def preStart = {
+    context.system.eventStream.subscribe(self, classOf[Message])
+    SharedLeveldbJournal.setStore(storeDB, context.system)
+  }
 
   override def postStop = context.system.eventStream.unsubscribe(self)
 
@@ -24,8 +30,8 @@ class BookTableService(serviceId: String) extends PersistentActor with ActorLogg
     cur
   }
 
-  def addTable(resp: AddTable): Unit = {
-    val AddTable(afterId, table, _) = resp
+  def addTable(cmd: AddTable):AddTable = {
+    val AddTable(afterId, table, a) = cmd
     val ntable = table.copy(id = Some(getId))
     val newList = if (afterId == -1 || tables.isEmpty) ntable :: tables
     else {
@@ -36,11 +42,11 @@ class BookTableService(serviceId: String) extends PersistentActor with ActorLogg
       nlist.reverse
     }
     tables = newList
-    ntable
+    AddTable(afterId, ntable, a)
   }
 
-  def updateTable(resp: UpdateTable): Unit = {
-      val UpdateTable(table, _) = resp
+  def updateTable(cmd: UpdateTable): UpdateTable = {
+      val UpdateTable(table, _) = cmd
       for {
         list <- Option(tables)
         tid <- table.id
@@ -52,12 +58,13 @@ class BookTableService(serviceId: String) extends PersistentActor with ActorLogg
         }
         tables = nlist.reverse
       }
-      //table
+      cmd
   }
 
-  def removeTable(resp: RemoveTable): Unit = {
-    val RemoveTable(tid, _) = resp
+  def removeTable(cmd: RemoveTable): RemoveTable = {
+    val RemoveTable(tid, _) = cmd
     tables = tables.filterNot(_.id.exists(_ == tid))
+    cmd
   }
 
   def sendResponseAndBroadcast[A <: DomainObj : Writes](receiver: ActorRef, msg: A, broadMsg: Message): Unit = {
@@ -103,7 +110,10 @@ class BookTableService(serviceId: String) extends PersistentActor with ActorLogg
           json.domain[RemoveTable].map(persist(_)(removeTable))
            //sendResponseAndBroadcast(receiver,TableRemoved(resp.id), TableRemovedMsg)
         }
+    case any => println("$any")
       }
+
+
   //}
 
 }
