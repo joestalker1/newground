@@ -35,22 +35,18 @@ class ApiGateway @Inject()(@Assisted wsOut: ActorRef, @Named("serviceLocator") s
 
   val prohibitedUserOps = Set("add_table", "update_table", "remove_table")
 
-  context.watch(serviceLocator)
-
-//  override def receive: Receive = LoggingReceive {
-//    case json: JsValue =>
-//      json.domain[LoginRequest].map(_ => findAndCall("login", json, self))
-//        .leftMap{_ =>
-//          val tryLogingSuc = json.domain[LoginSuccessful]
-//          tryLogingSuc.map { resp =>
-//             selectHandler(resp)
-//             wsOut forward json
-//          }
-//        }
-//    case _ =>
-//  }
-
-  override def receive:Receive = forAdmin
+  override def receive: Receive = LoggingReceive {
+    case json: JsValue =>
+      json.domain[LoginRequest].map(_ => findAndCall("login", json, self))
+        .leftMap{_ =>
+          val tryLogingSuc = json.domain[LoginSuccessful]
+          tryLogingSuc.map { resp =>
+             selectHandler(resp)
+             wsOut forward json
+          }
+        }
+    case _ =>
+  }
 
   def selectHandler(resp: LoginSuccessful): Unit = if (isAdmin(resp.userType)) context.become(forAdmin) else context.become(forUser)
 
