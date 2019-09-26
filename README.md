@@ -1,1 +1,1 @@
-Implementation of the test assigment!
+REST application to book tables using Akka Streams.
